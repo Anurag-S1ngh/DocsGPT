@@ -2593,7 +2593,8 @@
       "unreadableByModel": "{{model}} 無法讀取 {{name}}，請切換到支援圖片或 PDF 的模型",
       "queued": "等待上傳",
       "uploading": "正在上傳",
-      "processing": "正在處理"
+      "processing": "正在處理",
+      "imagePreview": "{{name}} 的預覽"
     },
     "retry": "重試",
     "failedTitle": "無法產生回覆",

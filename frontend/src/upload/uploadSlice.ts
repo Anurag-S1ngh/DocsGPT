@@ -151,6 +151,7 @@ function bindServerId(attachment: Attachment): Attachment {
 export interface SendableAttachment {
   id: string;
   fileName: string;
+  mimeType?: string;
 }
 
 /**
@@ -170,7 +171,11 @@ export function toSendableAttachments(
     const id = attachment.attachmentId ?? attachment.id;
     if (!id || seen.has(id)) continue;
     seen.add(id);
-    sendable.push({ id, fileName: attachment.fileName });
+    sendable.push({
+      id,
+      fileName: attachment.fileName,
+      mimeType: attachment.mimeType,
+    });
   }
   return sendable;
 }

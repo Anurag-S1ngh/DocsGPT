@@ -2605,7 +2605,8 @@
       "unreadableByModel": "{{model}} kann {{name}} nicht lesen – wechsle zu einem Modell, das Bilder oder PDFs unterstützt",
       "queued": "Wartet auf Upload",
       "uploading": "Wird hochgeladen",
-      "processing": "Wird verarbeitet"
+      "processing": "Wird verarbeitet",
+      "imagePreview": "Vorschau von {{name}}"
     },
     "retry": "Erneut versuchen",
     "failedTitle": "Antwort konnte nicht erstellt werden",

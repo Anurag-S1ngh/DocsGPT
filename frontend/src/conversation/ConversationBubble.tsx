@@ -28,6 +28,10 @@ import { useSelector } from 'react-redux';
 
 import { ArtifactCardList } from '../components/ArtifactCard';
 import CopyButton from '../components/CopyButton';
+import {
+  isPreviewableImage,
+  useAttachmentPreview,
+} from './useAttachmentPreview';
 
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
@@ -77,6 +81,44 @@ import { wikiWriteActionKey, wikiWritePath } from './wikiToolCall';
 
 const DisableSourceFE = envVar('VITE_DISABLE_SOURCE_FE') === 'true';
 
+function AttachedFileChip({
+  file,
+}: {
+  file: { id: string; fileName: string; mimeType?: string };
+}) {
+  const { t } = useTranslation();
+  const url = useAttachmentPreview(
+    isPreviewableImage(file.mimeType) ? file.id : undefined,
+  );
+
+  return (
+    <div
+      title={file.fileName}
+      className="bg-answer-surface text-foreground flex items-center rounded-xl p-2 text-sm"
+    >
+      {url ? (
+        <img
+          src={url}
+          alt={t('conversation.attachments.imagePreview', {
+            name: file.fileName,
+          })}
+          className="mr-2 size-10 rounded-lg object-cover"
+        />
+      ) : (
+        <div className="bg-primary mr-2 items-center justify-center rounded-lg p-1.5">
+          <Paperclip
+            aria-label={t('conversation.attachments.attachment')}
+            className="text-primary-foreground size-3.75"
+          />
+        </div>
+      )}
+      <span className="max-w-37.5 truncate font-normal" title={file.fileName}>
+        {file.fileName}
+      </span>
+    </div>
+  );
+}
+
 const ConversationBubble = forwardRef<
   HTMLDivElement,
   {
@@ -109,7 +151,7 @@ const ConversationBubble = forwardRef<
       updated?: boolean,
       index?: number,
     ) => void;
-    filesAttached?: { id: string; fileName: string }[];
+    filesAttached?: { id: string; fileName: string; mimeType?: string }[];
     /**
      * Every artifact in the conversation, for resolving inline links. Refs
      * are conversation-scoped, so a link may point at an earlier turn's file.
@@ -244,24 +286,7 @@ const ConversationBubble = forwardRef<
           {filesAttached && filesAttached.length > 0 && (
             <div className="mr-5 mb-4 flex flex-wrap justify-end gap-2">
               {filesAttached.map((file, index) => (
-                <div
-                  key={index}
-                  title={file.fileName}
-                  className="bg-answer-surface text-foreground flex items-center rounded-xl p-2 text-sm"
-                >
-                  <div className="bg-primary mr-2 items-center justify-center rounded-lg p-1.5">
-                    <Paperclip
-                      aria-label={t('conversation.attachments.attachment')}
-                      className="text-primary-foreground size-3.75"
-                    />
-                  </div>
-                  <span
-                    className="max-w-37.5 truncate font-normal"
-                    title={file.fileName}
-                  >
-                    {file.fileName}
-                  </span>
-                </div>
+                <AttachedFileChip key={index} file={file} />
               ))}
             </div>
           )}

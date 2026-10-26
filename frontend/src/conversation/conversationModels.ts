@@ -82,7 +82,7 @@ export interface Query {
   // Non-fatal notice (e.g. some workflow input documents were dropped). Shown
   // alongside the answer; unlike ``error`` it does not fail the turn or end the stream.
   notice?: string;
-  attachments?: { id: string; fileName: string }[];
+  attachments?: { id: string; fileName: string; mimeType?: string }[];
   // Set once a failed turn's files were turned into Knowledge: a retry or an
   // edit then asks through the selected Knowledge, without the files.
   attachmentsInKnowledge?: boolean;

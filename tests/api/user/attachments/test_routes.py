@@ -266,6 +266,112 @@ class TestSpeechToTextEndpoint:
             assert "Unsupported audio format" in _get_response_json(response)["message"]
 
 
+class TestAttachmentPreviewEndpoint:
+    _ATTACHMENT_ID = "4a8b6f9e-0d3c-4a44-9c6f-8b1f0c2d3e4f"
+
+    class _Repo:
+        row = None
+
+        def __init__(self, *a, **kw):
+            pass
+
+        def get(self, attachment_id, user_id):
+            row = type(self).row
+            if row and str(row.get("id")) == attachment_id and row.get("user_id") == user_id:
+                return row
+            return None
+
+    class _Storage:
+        def get_file_size(self, path):
+            return 5
+
+        def get_file(self, path):
+            return io.BytesIO(b"bytes")
+
+    def _get(self, user_sub, attachment_id=None):
+        from docsgpt.api.user.attachments.routes import AttachmentPreview
+
+        app = Flask(__name__)
+        with app.test_request_context(
+            f"/api/attachment/{attachment_id or self._ATTACHMENT_ID}/preview",
+            method="GET",
+        ):
+            request.decoded_token = {"sub": user_sub} if user_sub else None
+            return AttachmentPreview().get(attachment_id or self._ATTACHMENT_ID)
+
+    def _row(self, **overrides):
+        row = {
+            "id": self._ATTACHMENT_ID,
+            "user_id": "owner",
+            "filename": "shot.png",
+            "upload_path": "owner/shot.png",
+            "mime_type": "image/png",
+        }
+        row.update(overrides)
+        return row
+
+    def test_serves_owned_image_bytes(self):
+        self._Repo.row = self._row()
+        with patch(
+            "docsgpt.api.user.attachments.routes.AttachmentsRepository", self._Repo
+        ), patch(
+            "docsgpt.api.user.attachments.routes.StorageCreator.get_storage",
+            return_value=self._Storage(),
+        ), patch(
+            "docsgpt.api.user.attachments.routes.db_readonly", _fake_readonly
+        ):
+            response = self._get("owner")
+
+        assert response.status_code == 200
+        assert response.content_type == "image/png"
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert b"".join(response.response) == b"bytes"
+
+    def test_hides_other_users_attachment(self):
+        self._Repo.row = self._row()
+        with patch(
+            "docsgpt.api.user.attachments.routes.AttachmentsRepository", self._Repo
+        ), patch(
+            "docsgpt.api.user.attachments.routes.db_readonly", _fake_readonly
+        ):
+            response = self._get("intruder")
+
+        assert _get_response_status(response) == 404
+
+    def test_requires_authentication(self):
+        self._Repo.row = self._row()
+        with patch(
+            "docsgpt.api.user.attachments.routes.AttachmentsRepository", self._Repo
+        ), patch(
+            "docsgpt.api.user.attachments.routes.db_readonly", _fake_readonly
+        ):
+            response = self._get(None)
+
+        assert _get_response_status(response) == 404
+
+    def test_refuses_non_raster_types(self):
+        self._Repo.row = self._row(mime_type="image/svg+xml")
+        with patch(
+            "docsgpt.api.user.attachments.routes.AttachmentsRepository", self._Repo
+        ), patch(
+            "docsgpt.api.user.attachments.routes.db_readonly", _fake_readonly
+        ):
+            response = self._get("owner")
+
+        assert _get_response_status(response) == 404
+
+    def test_rejects_malformed_attachment_id(self):
+        self._Repo.row = self._row()
+        with patch(
+            "docsgpt.api.user.attachments.routes.AttachmentsRepository", self._Repo
+        ), patch(
+            "docsgpt.api.user.attachments.routes.db_readonly", _fake_readonly
+        ):
+            response = self._get("owner", attachment_id="not-a-uuid")
+
+        assert _get_response_status(response) == 404
+
+
 class TestLiveSpeechToTextEndpoint:
     @patch("docsgpt.api.user.attachments.routes.get_redis_instance")
     def test_live_stt_start_creates_session(

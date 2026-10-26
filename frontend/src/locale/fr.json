@@ -2689,7 +2689,8 @@
       "knowledgeName_many": "{{name}} et {{count}} autres",
       "queued": "En attente d’import",
       "uploading": "Import en cours",
-      "processing": "Traitement"
+      "processing": "Traitement",
+      "imagePreview": "Aperçu de {{name}}"
     },
     "retry": "Réessayer",
     "failedTitle": "Impossible de générer une réponse",

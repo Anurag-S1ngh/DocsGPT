@@ -190,6 +190,8 @@ const endpoints = {
       `/api/delete_chunk?id=${docId}&chunk_id=${chunkId}`,
     UPDATE_CHUNK: '/api/update_chunk',
     STORE_ATTACHMENT: '/api/store_attachment',
+    ATTACHMENT_PREVIEW: (attachmentId: string) =>
+      `/api/attachment/${attachmentId}/preview`,
     STT: '/api/stt',
     TTS: '/api/tts',
     LIVE_STT_START: '/api/stt/live/start',

@@ -2593,7 +2593,8 @@
       "unreadableByModel": "{{model}} は {{name}} を読み取れません。画像や PDF に対応したモデルに切り替えてください",
       "queued": "アップロード待ち",
       "uploading": "アップロード中",
-      "processing": "処理中"
+      "processing": "処理中",
+      "imagePreview": "{{name}} のプレビュー"
     },
     "retry": "再試行",
     "failedTitle": "応答を生成できませんでした",

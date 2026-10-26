@@ -5,7 +5,35 @@ import { useTranslation } from 'react-i18next';
 import type { Attachment } from '../../upload/uploadSlice';
 import { IconButton } from '../ui/icon-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import {
+  isPreviewableImage,
+  useAttachmentPreview,
+} from '@/conversation/useAttachmentPreview';
 import { cn, focusRing } from '@/lib/utils';
+
+function AttachmentThumbnail({ attachment }: { attachment: Attachment }) {
+  const { t } = useTranslation();
+  const url = useAttachmentPreview(attachment.attachmentId);
+
+  if (!url) {
+    return (
+      <Paperclip
+        aria-label={t('conversation.attachments.attached')}
+        className="size-3.75"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      alt={t('conversation.attachments.imagePreview', {
+        name: attachment.fileName,
+      })}
+      className="size-full rounded-md object-cover"
+    />
+  );
+}
 
 type AttachmentChipListProps = {
   attachments: Attachment[];
@@ -97,12 +125,15 @@ export default function AttachmentChipList({
                       : 'bg-primary text-primary-foreground',
                   )}
                 >
-                  {attachment.status === 'completed' && (
-                    <Paperclip
-                      aria-label={t('conversation.attachments.attached')}
-                      className="size-3.75"
-                    />
-                  )}
+                  {attachment.status === 'completed' &&
+                    (isPreviewableImage(attachment.mimeType) ? (
+                      <AttachmentThumbnail attachment={attachment} />
+                    ) : (
+                      <Paperclip
+                        aria-label={t('conversation.attachments.attached')}
+                        className="size-3.75"
+                      />
+                    ))}
 
                   {failed && (
                     <CircleAlert

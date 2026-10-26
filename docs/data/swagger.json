@@ -3029,6 +3029,29 @@
         }
       ]
     },
+    "/api/attachment/{attachment_id}/preview": {
+      "get": {
+        "description": "Serves the bytes of an image attachment the caller owns, for chat thumbnails. Raster formats only; anything else is a 404.",
+        "operationId": "get_attachment_preview",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "attachments"
+        ],
+        "x-pat-denied": true
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "attachment_id",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
     "/api/available_tools": {
       "get": {
         "description": "Get available tools for a user",

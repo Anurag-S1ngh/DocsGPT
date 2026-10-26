@@ -348,6 +348,7 @@ class GetSingleConversation(Resource):
                                             "fileName": att.get(
                                                 "filename", "Unknown file"
                                             ),
+                                            "mimeType": att.get("mime_type"),
                                         }
                                     )
                             except Exception as e:

@@ -15,7 +15,9 @@ from docsgpt.cache import get_redis_instance
 from docsgpt.core.settings import settings
 from docsgpt.storage.db.base_repository import looks_like_uuid
 from docsgpt.storage.db.repositories.agents import AgentsRepository
+from docsgpt.storage.db.repositories.attachments import AttachmentsRepository
 from docsgpt.storage.db.session import db_readonly
+from docsgpt.storage.storage_creator import StorageCreator
 from docsgpt.stt.constants import (
     SUPPORTED_AUDIO_EXTENSIONS,
     SUPPORTED_AUDIO_MIME_TYPES,
@@ -63,6 +65,20 @@ attachments_ns = Namespace(
 _AGENT_IMAGE_CHUNK_BYTES = 64 * 1024
 _AGENT_IMAGE_PRESIGNED_TTL_SECONDS = 300
 _AGENT_IMAGE_REDIRECT_CACHE_SECONDS = _AGENT_IMAGE_PRESIGNED_TTL_SECONDS - 60
+
+# Raster types a chat thumbnail may show. SVG is deliberately absent: it is
+# admitted as text elsewhere, so serving it here would let stored markup run.
+_PREVIEW_MIME_TYPES = frozenset(
+    {
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+    }
+)
+_PREVIEW_CACHE_SECONDS = 300
 
 
 def _stream_file(file_obj, size_bytes: int):
@@ -344,6 +360,64 @@ class StoreAttachment(Resource):
         except Exception as err:
             current_app.logger.error(f"Error storing attachment: {err}", exc_info=True)
             return make_response(jsonify({"success": False, "error": "Failed to store attachment"}), 400)
+
+
+@attachments_ns.route("/attachment/<string:attachment_id>/preview")
+class AttachmentPreview(Resource):
+    @api.doc(
+        description=(
+            "Serves the bytes of an image attachment the caller owns, for chat "
+            "thumbnails. Raster formats only; anything else is a 404."
+        )
+    )
+    def get(self, attachment_id):
+        auth_user = _resolve_authenticated_user()
+        if hasattr(auth_user, "status_code"):
+            return auth_user
+        if not auth_user or not looks_like_uuid(attachment_id):
+            return make_response(
+                jsonify({"success": False, "message": "Image not found"}), 404
+            )
+
+        with db_readonly() as conn:
+            row = AttachmentsRepository(conn).get(attachment_id, auth_user)
+        if not row:
+            return make_response(
+                jsonify({"success": False, "message": "Image not found"}), 404
+            )
+
+        mime_type = (row.get("mime_type") or "").split(";")[0].strip().lower()
+        upload_path = row.get("upload_path")
+        if mime_type not in _PREVIEW_MIME_TYPES or not upload_path:
+            return make_response(
+                jsonify({"success": False, "message": "Image not found"}), 404
+            )
+
+        storage = StorageCreator.get_storage()
+        try:
+            size_bytes = storage.get_file_size(upload_path)
+            file_obj = storage.get_file(upload_path)
+        except FileNotFoundError:
+            return make_response(
+                jsonify({"success": False, "message": "Image not found"}), 404
+            )
+        except ValueError:
+            return make_response(
+                jsonify({"success": False, "message": "Image not found"}), 404
+            )
+
+        response = Response(
+            _stream_file(file_obj, size_bytes),
+            content_type=mime_type,
+            direct_passthrough=True,
+        )
+        response.headers.set("Cache-Control", f"private, max-age={_PREVIEW_CACHE_SECONDS}")
+        response.headers.set("X-Content-Type-Options", "nosniff")
+        response.headers.set(
+            "Content-Disposition",
+            f'inline; filename="{safe_filename(row.get("filename") or attachment_id)}"',
+        )
+        return response
 
 
 _STT_DISABLED_MESSAGE = "Speech-to-text is disabled on this server."

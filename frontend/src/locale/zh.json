@@ -2591,7 +2591,8 @@
       "unreadableByModel": "{{model}} 无法读取 {{name}}，请切换到支持图片或 PDF 的模型",
       "queued": "等待上传",
       "uploading": "正在上传",
-      "processing": "正在处理"
+      "processing": "正在处理",
+      "imagePreview": "{{name}} 的预览"
     },
     "retry": "重试",
     "failedTitle": "无法生成回复",
