@@ -380,11 +380,14 @@ class AttachmentPreview(Resource):
             )
 
         with db_readonly() as conn:
-            row = AttachmentsRepository(conn).get(attachment_id, auth_user)
-        if not row:
-            return make_response(
-                jsonify({"success": False, "message": "Image not found"}), 404
-            )
+            repo = AttachmentsRepository(conn)
+            row = repo.get(attachment_id, auth_user)
+            if not row:
+                row = repo.get_by_legacy_id(attachment_id, auth_user)
+            if not row:
+                return make_response(
+                    jsonify({"success": False, "message": "Image not found"}), 404
+                )
 
         mime_type = (row.get("mime_type") or "").split(";")[0].strip().lower()
         upload_path = row.get("upload_path")

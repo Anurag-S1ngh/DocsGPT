@@ -281,6 +281,16 @@ class TestAttachmentPreviewEndpoint:
                 return row
             return None
 
+        def get_by_legacy_id(self, legacy_id, user_id=None):
+            row = type(self).row
+            if (
+                row
+                and str(row.get("legacy_mongo_id") or "") == str(legacy_id)
+                and (user_id is None or row.get("user_id") == user_id)
+            ):
+                return row
+            return None
+
     class _Storage:
         def get_file_size(self, path):
             return 5
@@ -298,6 +308,35 @@ class TestAttachmentPreviewEndpoint:
         ):
             request.decoded_token = {"sub": user_sub} if user_sub else None
             return AttachmentPreview().get(attachment_id or self._ATTACHMENT_ID)
+
+    def test_resolves_route_minted_id_via_legacy_lookup(self):
+        self._Repo.row = None
+
+        def fake_get(attachment_id, user_id):
+            return None
+
+        def fake_get_by_legacy(legacy_id, user_id):
+            assert user_id == "owner"
+            if legacy_id == self._ATTACHMENT_ID:
+                return self._row()
+            return None
+
+        with patch(
+            "docsgpt.api.user.attachments.routes.AttachmentsRepository"
+        ) as repo_cls, patch(
+            "docsgpt.api.user.attachments.routes.StorageCreator.get_storage",
+            return_value=self._Storage(),
+        ), patch(
+            "docsgpt.api.user.attachments.routes.db_readonly", _fake_readonly
+        ):
+            repo_cls.return_value.get.side_effect = fake_get
+            repo_cls.return_value.get_by_legacy_id.side_effect = (
+                fake_get_by_legacy
+            )
+            response = self._get("owner")
+
+        assert response.status_code == 200
+        assert response.content_type == "image/png"
 
     def _row(self, **overrides):
         row = {
